@@ -101,7 +101,8 @@ export function useUser() {
         return { ok: false, message };
       }
 
-      return { ok: true };
+      const user = await response.json();
+      return { ok: true, user };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
