@@ -18,7 +18,7 @@ export default function HomePage() {
           <div className="flex items-center gap-4">
             {user?.isAdmin && (
               <Button variant="outline" asChild>
-                <a href="/admin">Admin Panel</a>
+                <a href="/admin">管理パネル</a>
               </Button>
             )}
             <Button variant="ghost" size="icon" onClick={() => logout()}>
