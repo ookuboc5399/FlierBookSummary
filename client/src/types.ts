@@ -3,6 +3,8 @@ export interface BookWithSummary {
   title: string;
   author: string;
   coverUrl: string | null;
+  category: string | null;
+  tags: string[] | null;
   createdAt: Date;
   updatedAt: Date;
   summary: {
@@ -13,6 +15,7 @@ export interface BookWithSummary {
     updatedAt: Date;
   } | null;
   isFavorite?: boolean;
+  recommendationScore?: number;
 }
 
 export interface CreateBookInput {

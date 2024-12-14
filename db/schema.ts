@@ -15,6 +15,8 @@ export const books = pgTable("books", {
   title: text("title").notNull(),
   author: text("author").notNull(),
   coverUrl: text("cover_url"),
+  category: text("category"),
+  tags: text("tags").array(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -35,6 +37,13 @@ export const favorites = pgTable("favorites", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const bookViews = pgTable("book_views", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  bookId: integer("book_id").references(() => books.id).notNull(),
+  viewedAt: timestamp("viewed_at").defaultNow().notNull(),
+});
+
 // Relations
 export const booksRelations = relations(books, ({ one, many }) => ({
   summary: one(summaries, {
@@ -42,6 +51,18 @@ export const booksRelations = relations(books, ({ one, many }) => ({
     references: [summaries.bookId],
   }),
   favorites: many(favorites),
+  views: many(bookViews),
+}));
+
+export const bookViewsRelations = relations(bookViews, ({ one }) => ({
+  user: one(users, {
+    fields: [bookViews.userId],
+    references: [users.id],
+  }),
+  book: one(books, {
+    fields: [bookViews.bookId],
+    references: [books.id],
+  }),
 }));
 
 export const summariesRelations = relations(summaries, ({ one }) => ({

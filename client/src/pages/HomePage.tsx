@@ -36,14 +36,37 @@ export default function HomePage() {
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {summaries?.map((book) => (
-              <BookSummaryCard
-                key={book.id}
-                book={book}
-                onToggleFavorite={() => toggleFavorite(book.id)}
-              />
-            ))}
+          <div className="space-y-8">
+            {/* おすすめの本 */}
+            <div className="space-y-4">
+              <h3 className="text-2xl font-semibold">おすすめの本</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {summaries
+                  ?.filter(book => book.recommendationScore > 0)
+                  .slice(0, 3)
+                  .map((book) => (
+                    <BookSummaryCard
+                      key={book.id}
+                      book={book}
+                      onToggleFavorite={() => toggleFavorite(book.id)}
+                    />
+                  ))}
+              </div>
+            </div>
+
+            {/* 全ての本 */}
+            <div className="space-y-4">
+              <h3 className="text-2xl font-semibold">全ての本</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {summaries?.map((book) => (
+                  <BookSummaryCard
+                    key={book.id}
+                    book={book}
+                    onToggleFavorite={() => toggleFavorite(book.id)}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </main>
