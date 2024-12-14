@@ -7,6 +7,11 @@ export const users = pgTable("users", {
   username: text("username").unique().notNull(),
   password: text("password").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  displayName: text("display_name"),
+  preferredCategories: text("preferred_categories").array(),
+  preferredTags: text("preferred_tags").array(),
+  emailNotifications: boolean("email_notifications").default(true),
+  darkMode: boolean("dark_mode").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

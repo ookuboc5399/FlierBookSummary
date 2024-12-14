@@ -16,14 +16,19 @@ export default function HomePage() {
             Flier
           </h1>
           <div className="flex items-center gap-4">
-            {user?.isAdmin && (
+            <div className="flex items-center gap-4">
+              {user?.isAdmin && (
+                <Button variant="outline" asChild>
+                  <a href="/admin">管理パネル</a>
+                </Button>
+              )}
               <Button variant="outline" asChild>
-                <a href="/admin">管理パネル</a>
+                <a href="/profile">プロファイル</a>
               </Button>
-            )}
-            <Button variant="ghost" size="icon" onClick={() => logout()}>
-              <LogOut className="h-4 w-4" />
-            </Button>
+              <Button variant="ghost" size="icon" onClick={() => logout()}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>

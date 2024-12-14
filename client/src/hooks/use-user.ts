@@ -64,6 +64,14 @@ async function fetchUser(): Promise<User | null> {
   return response.json();
 }
 
+type UpdateProfileInput = {
+  displayName: string;
+  preferredCategories: string[];
+  preferredTags: string[];
+  emailNotifications: boolean;
+  darkMode: boolean;
+};
+
 export function useUser() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -73,6 +81,42 @@ export function useUser() {
     queryFn: fetchUser,
     staleTime: Infinity,
     retry: false,
+  });
+
+  const updateProfileMutation = useMutation<RequestResult, Error, UpdateProfileInput>({
+    mutationFn: async (data) => {
+      const response = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        if (response.status >= 500) {
+          return { ok: false, message: response.statusText };
+        }
+
+        const message = await response.text();
+        return { ok: false, message };
+      }
+
+      return { ok: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      toast({
+        title: "Success",
+        description: "プロフィールを更新しました",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const loginMutation = useMutation<RequestResult, Error, LoginCredentials>({
@@ -152,5 +196,6 @@ export function useUser() {
     login: loginMutation.mutateAsync,
     logout: logoutMutation.mutateAsync,
     register: registerMutation.mutateAsync,
+    updateProfile: updateProfileMutation.mutateAsync,
   };
 }

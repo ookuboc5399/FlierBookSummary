@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { db } from "../db";
-import { books, summaries, favorites, bookViews } from "@db/schema";
+import { books, summaries, favorites, bookViews, users } from "@db/schema"; // Added users import
 import { eq, and, desc } from "drizzle-orm";
 import { setupAuth } from "./auth";
 import { processBookSummary } from "./openai";
@@ -174,6 +174,30 @@ export function registerRoutes(app: Express) {
 
       res.json({ ok: true });
     } catch (error) {
+      res.status(500).send(error.message);
+    }
+  });
+
+  app.put("/api/user/profile", async (req, res) => {
+    if (!req.user) {
+      return res.status(401).send("Unauthorized");
+    }
+
+    try {
+      const [updatedUser] = await db
+        .update(users)
+        .set({
+          displayName: req.body.displayName,
+          preferredCategories: req.body.preferredCategories,
+          preferredTags: req.body.preferredTags,
+          emailNotifications: req.body.emailNotifications,
+          darkMode: req.body.darkMode,
+        })
+        .where(eq(users.id, req.user.id))
+        .returning();
+
+      res.json(updatedUser);
+    } catch (error: any) {
       res.status(500).send(error.message);
     }
   });

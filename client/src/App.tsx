@@ -32,6 +32,7 @@ function Router() {
     <Switch>
       <Route path="/admin" component={AdminPage} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/profile" component={ProfilePage} />
       <Route path="/" component={HomePage} />
       <Route>404 Page Not Found</Route>
     </Switch>
