@@ -42,7 +42,7 @@ export default function HomePage() {
               <h3 className="text-2xl font-semibold">おすすめの本</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {summaries
-                  ?.filter(book => book.recommendationScore > 0)
+                  ?.filter(book => (book.recommendationScore ?? 0) > 0)
                   .slice(0, 3)
                   .map((book) => (
                     <BookSummaryCard
