@@ -25,7 +25,8 @@ export default function AdminPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <h2 className="text-xl font-semibold">新しい本の要約を追加</h2>
           <AdminBookForm />
         </div>
       </main>

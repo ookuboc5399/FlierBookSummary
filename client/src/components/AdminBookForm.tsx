@@ -48,9 +48,9 @@ export function AdminBookForm() {
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Book Title</FormLabel>
+              <FormLabel>タイトル</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="本のタイトルを入力" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -61,9 +61,9 @@ export function AdminBookForm() {
           name="author"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Author</FormLabel>
+              <FormLabel>著者</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="著者名を入力" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -74,9 +74,9 @@ export function AdminBookForm() {
           name="coverUrl"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Cover Image URL (optional)</FormLabel>
+              <FormLabel>表紙画像URL（任意）</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input placeholder="https://example.com/book-cover.jpg" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -87,9 +87,13 @@ export function AdminBookForm() {
           name="summary"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Summary</FormLabel>
+              <FormLabel>要約</FormLabel>
               <FormControl>
-                <Textarea {...field} rows={10} />
+                <Textarea 
+                  placeholder="本の内容を要約して入力してください（100文字以上）" 
+                  {...field} 
+                  rows={10} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -103,7 +107,7 @@ export function AdminBookForm() {
           {form.formState.isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            "Create Summary"
+            "要約を作成"
           )}
         </Button>
       </form>
