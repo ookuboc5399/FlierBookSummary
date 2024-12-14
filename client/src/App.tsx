@@ -5,8 +5,10 @@ import { Toaster } from "@/components/ui/toaster";
 import HomePage from "./pages/HomePage";
 import AdminPage from "./pages/AdminPage";
 import AuthPage from "./pages/AuthPage";
+import ProfilePage from "./pages/ProfilePage";
 import { useUser } from "./hooks/use-user";
 import { Loader2 } from "lucide-react";
+import { ThemeProvider } from "@/lib/theme";
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -42,8 +44,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router />
-      <Toaster />
+      <ThemeProvider>
+        <Router />
+        <Toaster />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
