@@ -15,8 +15,8 @@ export function BookSummaryCard({ book, onToggleFavorite }: Props) {
   const [isPlaying, setIsPlaying] = useState(false);
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
+    <Card className="h-full flex flex-col hover:shadow-lg transition-shadow">
+      <CardHeader className="p-4 sm:p-6">
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-xl mb-1">{book.title}</CardTitle>
@@ -26,9 +26,12 @@ export function BookSummaryCard({ book, onToggleFavorite }: Props) {
             variant="ghost"
             size="icon"
             onClick={onToggleFavorite}
-            className={cn(book.isFavorite && "text-red-500")}
+            className={cn(
+              "p-3 sm:p-2",
+              book.isFavorite && "text-red-500"
+            )}
           >
-            <Heart className="h-4 w-4" />
+            <Heart className="h-5 w-5 sm:h-4 sm:w-4" />
           </Button>
         </div>
       </CardHeader>

@@ -56,14 +56,19 @@ export function AudioPlayer({ url, onClose }: Props) {
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <audio ref={audioRef} src={url} />
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" onClick={togglePlay}>
+      <div className="flex items-center gap-3">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={togglePlay}
+          className="p-3 sm:p-2"
+        >
           {isPlaying ? (
-            <PauseCircle className="h-4 w-4" />
+            <PauseCircle className="h-6 w-6 sm:h-4 sm:w-4" />
           ) : (
-            <PlayCircle className="h-4 w-4" />
+            <PlayCircle className="h-6 w-6 sm:h-4 sm:w-4" />
           )}
         </Button>
         <Slider
@@ -73,8 +78,13 @@ export function AudioPlayer({ url, onClose }: Props) {
           onValueChange={handleSeek}
           className="flex-1"
         />
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-4 w-4" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={onClose}
+          className="p-3 sm:p-2"
+        >
+          <X className="h-6 w-6 sm:h-4 sm:w-4" />
         </Button>
       </div>
       <div className="text-xs text-muted-foreground flex justify-between">
