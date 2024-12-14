@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer } from "http";
 import { db } from "../db";
-import { books, summaries, favorites } from "@db/schema";
-import { eq, and } from "drizzle-orm";
+import { books, summaries, favorites, bookViews } from "@db/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { setupAuth } from "./auth";
 import { processBookSummary } from "./openai";
 import type { CreateBookInput } from "../client/src/types";
@@ -33,46 +33,68 @@ export function registerRoutes(app: Express) {
       );
     }
 
-    // Get user's reading history for recommendations
-    const userHistory = userId ? await db.query.bookViews.findMany({
-      where: eq(bookViews.userId, userId),
-      with: {
-        book: {
-          with: {
-            summary: true,
+    // Get user's reading history and favorites for recommendations
+    const [userHistory, userFavorites] = await Promise.all([
+      userId ? db.query.bookViews.findMany({
+        where: eq(bookViews.userId, userId),
+        with: {
+          book: {
+            with: {
+              summary: true,
+            }
           }
+        },
+        orderBy: desc(bookViews.viewedAt),
+      }) : Promise.resolve([]),
+      userId ? db.query.favorites.findMany({
+        where: eq(favorites.userId, userId),
+        with: {
+          book: true,
         }
-      },
-      limit: 10,
-      orderBy: desc(bookViews.viewedAt),
-    }) : [];
+      }) : Promise.resolve([]),
+    ]);
 
-    // Create a map of categories and tags from user's history
-    const userPreferences = userHistory.reduce((acc, view) => {
-      if (view.book.category) {
-        acc.categories[view.book.category] = (acc.categories[view.book.category] || 0) + 1;
+    // Create a map of categories and tags from user's history and favorites
+    const userPreferences = [...userHistory, ...userFavorites].reduce((acc, item) => {
+      const book = 'book' in item ? item.book : item;
+      if (book.category) {
+        acc.categories[book.category] = (acc.categories[book.category] || 0) + 1;
       }
-      view.book.tags?.forEach(tag => {
+      book.tags?.forEach(tag => {
         acc.tags[tag] = (acc.tags[tag] || 0) + 1;
       });
+      // Favorites get higher weight
+      if ('userId' in item) {
+        if (book.category) {
+          acc.categories[book.category] += 2;
+        }
+        book.tags?.forEach(tag => {
+          acc.tags[tag] += 2;
+        });
+      }
       return acc;
     }, { categories: {}, tags: {} } as { categories: Record<string, number>, tags: Record<string, number> });
 
-    // Score books based on user preferences
+    // Score books based on user preferences with improved weighting
     const booksWithScore = results.map(book => {
       let score = 0;
       
-      // Category matching
+      // Base score for category matching
       if (book.category && userPreferences.categories[book.category]) {
-        score += userPreferences.categories[book.category];
+        score += userPreferences.categories[book.category] * 2; // カテゴリーマッチの重みを増加
       }
 
-      // Tag matching
-      book.tags?.forEach(tag => {
+      // Weighted tag matching
+      const uniqueTags = new Set(book.tags || []);
+      uniqueTags.forEach(tag => {
         if (userPreferences.tags[tag]) {
           score += userPreferences.tags[tag];
         }
       });
+
+      // Recency boost - newer books get slightly higher scores
+      const ageInDays = (Date.now() - new Date(book.createdAt).getTime()) / (1000 * 60 * 60 * 24);
+      score += Math.max(0, 5 - Math.floor(ageInDays / 30)); // 5ポイントから始まり、毎月1ポイント減少
 
       return {
         ...book,
