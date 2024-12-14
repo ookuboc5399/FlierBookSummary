@@ -16,10 +16,10 @@ import { useSummaries } from "@/hooks/use-summaries";
 import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  title: z.string().min(1),
-  author: z.string().min(1),
+  title: z.string().min(1, "タイトルを入力してください"),
+  author: z.string().min(1, "著者名を入力してください"),
   coverUrl: z.string().url().optional(),
-  summary: z.string().min(100),
+  summary: z.string().min(100, "要約は100文字以上入力してください"),
 });
 
 export function AdminBookForm() {
@@ -36,8 +36,12 @@ export function AdminBookForm() {
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    await createSummary(values);
-    form.reset();
+    try {
+      await createSummary(values);
+      form.reset();
+    } catch (error) {
+      console.error('Error creating summary:', error);
+    }
   };
 
   return (
@@ -50,7 +54,7 @@ export function AdminBookForm() {
             <FormItem>
               <FormLabel>タイトル</FormLabel>
               <FormControl>
-                <Input placeholder="本のタイトルを入力" {...field} />
+                <Input placeholder="本のタイトルを入力してください" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -63,7 +67,7 @@ export function AdminBookForm() {
             <FormItem>
               <FormLabel>著者</FormLabel>
               <FormControl>
-                <Input placeholder="著者名を入力" {...field} />
+                <Input placeholder="著者名を入力してください" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -76,7 +80,11 @@ export function AdminBookForm() {
             <FormItem>
               <FormLabel>表紙画像URL（任意）</FormLabel>
               <FormControl>
-                <Input placeholder="https://example.com/book-cover.jpg" {...field} />
+                <Input 
+                  placeholder="https://example.com/book-cover.jpg" 
+                  {...field} 
+                  value={field.value || ""} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -92,7 +100,8 @@ export function AdminBookForm() {
                 <Textarea 
                   placeholder="本の内容を要約して入力してください（100文字以上）" 
                   {...field} 
-                  rows={10} 
+                  rows={10}
+                  className="min-h-[200px]"
                 />
               </FormControl>
               <FormMessage />
@@ -105,7 +114,10 @@ export function AdminBookForm() {
           className="w-full"
         >
           {form.formState.isSubmitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              処理中...
+            </>
           ) : (
             "要約を作成"
           )}

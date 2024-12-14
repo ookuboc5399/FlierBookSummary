@@ -11,7 +11,9 @@ export default function AdminPage() {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (user && !user.isAdmin && !initialized) {
+    if (!user) {
+      setLocation("/auth");
+    } else if (!user.isAdmin && !initialized) {
       setInitialized(true);
       setLocation("/");
     }
@@ -33,9 +35,11 @@ export default function AdminPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-2xl mx-auto space-y-6">
-          <h2 className="text-xl font-semibold">新しい本の要約を追加</h2>
-          <AdminBookForm />
+        <div className="max-w-2xl mx-auto">
+          <div className="space-y-6 bg-card p-6 rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold">新しい本の要約を追加</h2>
+            <AdminBookForm />
+          </div>
         </div>
       </main>
     </div>
