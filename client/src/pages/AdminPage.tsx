@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { AdminBookForm } from "@/components/AdminBookForm";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
@@ -7,9 +8,16 @@ import { useLocation } from "wouter";
 export default function AdminPage() {
   const { user } = useUser();
   const [, setLocation] = useLocation();
+  const [initialized, setInitialized] = useState(false);
 
-  if (!user?.isAdmin) {
-    setLocation("/");
+  useEffect(() => {
+    if (user && !user.isAdmin && !initialized) {
+      setInitialized(true);
+      setLocation("/");
+    }
+  }, [user, initialized, setLocation]);
+
+  if (!user || !user.isAdmin) {
     return null;
   }
 
@@ -20,7 +28,7 @@ export default function AdminPage() {
           <Button variant="ghost" size="icon" onClick={() => setLocation("/")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">Admin Panel</h1>
+          <h1 className="text-2xl font-bold">管理パネル</h1>
         </div>
       </header>
 
