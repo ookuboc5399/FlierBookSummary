@@ -28,7 +28,15 @@ export async function processBookSummary(input: CreateBookInput) {
     messages: [
       {
         role: "system",
-        content: "You are an expert at summarizing books for business professionals. Enhance the following summary to be more engaging and insightful while maintaining its core message. Keep the length similar.",
+        content: `あなたはビジネス書の要約のスペシャリストです。以下の本の要約を、以下のガイドラインに従って改善してください：
+
+1. ビジネスパーソンにとって実用的で価値のある内容に焦点を当てる
+2. 本の主要なポイントを明確に説明する
+3. 実践的なアドバイスや具体例を含める
+4. 専門用語は必要最小限に抑え、分かりやすい言葉で説明する
+5. 結論や実践のためのステップを含める
+
+元の要約の長さは保持しつつ、より魅力的で洞察に富んだ内容にしてください。`,
       },
       {
         role: "user",
@@ -38,7 +46,7 @@ export async function processBookSummary(input: CreateBookInput) {
   });
 
   const enhancedSummary = summaryResponse.choices[0].message.content;
-  if (!enhancedSummary) throw new Error("Failed to generate summary");
+  if (!enhancedSummary) throw new Error("要約の生成に失敗しました");
 
   // Then, generate audio for the enhanced summary
   const audioUrl = await generateSummaryAudio(enhancedSummary);
