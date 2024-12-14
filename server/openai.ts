@@ -9,50 +9,93 @@ if (!process.env.OPENAI_API_KEY) {
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function generateSummaryAudio(text: string): Promise<string> {
-  const response = await openai.audio.speech.create({
-    model: "tts-1",
-    voice: "alloy",
-    input: text,
-  });
+  try {
+    const response = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: "nova", // Changed to nova for better Japanese pronunciation
+      input: text,
+      speed: 0.9, // Slightly slower for better comprehension
+      response_format: "mp3",
+    });
 
-  const buffer = Buffer.from(await response.arrayBuffer());
-  // In a real application, you would upload this to a storage service
-  // For this example, we'll return a data URL
-  return `data:audio/mp3;base64,${buffer.toString("base64")}`;
+    const buffer = Buffer.from(await response.arrayBuffer());
+    // In a real application, you would upload this to a storage service
+    // For this example, we'll return a data URL
+    return `data:audio/mp3;base64,${buffer.toString("base64")}`;
+  } catch (error: any) {
+    console.error("Audio generation error:", error);
+    throw new Error(`音声の生成中にエラーが発生しました: ${error.message}`);
+  }
 }
 
 export async function processBookSummary(input: CreateBookInput) {
-  // First, let's enhance the summary using GPT-4
-  const summaryResponse = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      {
-        role: "system",
-        content: `あなたはビジネス書の要約のスペシャリストです。以下の本の要約を、以下のガイドラインに従って改善してください：
+  try {
+    // First, let's enhance the summary using GPT-4
+    const summaryResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `あなたはビジネス書の要約のスペシャリストです。以下の本の要約を、以下のガイドラインに従って改善してください：
 
-1. ビジネスパーソンにとって実用的で価値のある内容に焦点を当てる
-2. 本の主要なポイントを明確に説明する
-3. 実践的なアドバイスや具体例を含める
-4. 専門用語は必要最小限に抑え、分かりやすい言葉で説明する
-5. 結論や実践のためのステップを含める
+1. エグゼクティブサマリー（200文字程度）
+   - 本の主要な価値提案を簡潔に説明
+   - 想定読者と期待される効果を明示
 
-元の要約の長さは保持しつつ、より魅力的で洞察に富んだ内容にしてください。`,
-      },
-      {
-        role: "user",
-        content: input.summary,
-      },
-    ],
-  });
+2. 主要なポイント（3-5つ）
+   - 各ポイントは明確な見出しと説明
+   - 実務での具体的な適用方法を含む
 
-  const enhancedSummary = summaryResponse.choices[0].message.content;
-  if (!enhancedSummary) throw new Error("要約の生成に失敗しました");
+3. 実践的なアクションアイテム
+   - 明日から実践できる具体的なステップ
+   - 期待される成果と測定方法
 
-  // Then, generate audio for the enhanced summary
-  const audioUrl = await generateSummaryAudio(enhancedSummary);
+4. 補足情報
+   - 重要な用語の解説（必要な場合のみ）
+   - 関連書籍や参考資料
 
-  return {
-    content: enhancedSummary,
-    audioUrl,
-  };
+要約は以下の形式で構造化してください：
+
+# エグゼクティブサマリー
+[ここに要約を記載]
+
+# 主要なポイント
+1. [ポイント1のタイトル]
+   - [説明]
+   - [実践方法]
+
+2. [ポイント2のタイトル]
+   ...
+
+# アクションプラン
+1. [具体的なアクション]
+   - [実施方法]
+   - [期待効果]
+
+# 補足情報
+- [用語解説や参考情報]`,
+        },
+        {
+          role: "user",
+          content: input.summary,
+        },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+
+    const enhancedSummary = summaryResponse.choices[0].message.content;
+    if (!enhancedSummary) throw new Error("要約の生成に失敗しました");
+
+    // Generate audio for the enhanced summary with Japanese optimization
+    const audioUrl = await generateSummaryAudio(enhancedSummary);
+
+    return {
+      content: enhancedSummary,
+      audioUrl,
+    };
+  } catch (error: any) {
+    console.error("Book summary processing error:", error);
+    throw new Error(`要約の処理中にエラーが発生しました: ${error.message}`);
+  }
 }
