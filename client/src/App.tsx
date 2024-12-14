@@ -24,6 +24,10 @@ function Router() {
     return <AuthPage />;
   }
 
+  if (user?.isAdmin && location === "/admin") {
+    return <AdminPage />;
+  }
+
   return (
     <Switch>
       <Route path="/admin" component={AdminPage} />

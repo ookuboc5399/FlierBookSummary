@@ -36,7 +36,7 @@ export default function AdminPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          <div className="space-y-6 bg-card p-6 rounded-lg shadow-sm">
+          <div className="space-y-6 bg-card p-6 rounded-lg shadow-sm border">
             <h2 className="text-xl font-semibold">新しい本の要約を追加</h2>
             <AdminBookForm />
           </div>
