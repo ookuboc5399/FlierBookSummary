@@ -1,43 +1,67 @@
-import { useUser } from "@/hooks/use-user";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card, CardHeader, CardContent, CardTitle } from "../components/ui/card";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "../components/ui/form";
+import { useToast } from "../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import useAuth from "../hooks/use-auth";
 
 const formSchema = z.object({
-  username: z.string().min(3),
-  password: z.string().min(6),
+  email: z.string()
+    .email("メールアドレスの形式が正しくありません")
+    .superRefine((value, ctx) => {
+      console.log('Validating email:', value);
+      // Admin validation - must use proper email format
+      if (value === 'admin@admin.flier.local') {
+        console.log('Admin validation passed');
+        return;
+      }
+      // Additional email validation if needed
+      if (!value.includes('@')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "メールアドレスに@をつけてください",
+        });
+      }
+    }),
+  password: z.string()
+    .min(8, "パスワードは8文字以上である必要があります。")
 });
 
 export default function AuthPage() {
-  const { login, register } = useUser();
+  const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { signIn } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
-    },
+    }
   });
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      await register(values);
-      setLocation("/");
+      const { isAdmin } = await signIn(values.email, values.password);
+
+      toast({
+        title: "ログイン成功",
+        description: isAdmin ? "管理者としてログインしました。" : "ログインしました。",
+      });
+
+      // Navigate based on user role
+      setLocation(isAdmin ? '/admin' : '/');
     } catch (error) {
-      try {
-        await login(values);
-        setLocation("/");
-      } catch (loginError) {
-        form.setError("root", {
-          message: "Invalid username or password",
-        });
-      }
+      console.error('Login error:', error);
+      toast({
+        title: "ログインエラー",
+        description: "メールアドレスまたはパスワードが正しくありません。",
+        variant: "destructive",
+      });
     }
   };
 
@@ -51,15 +75,18 @@ export default function AuthPage() {
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-4"
+            >
               <FormField
                 control={form.control}
-                name="username"
+                name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel>メールアドレス</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input type="text" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -70,7 +97,7 @@ export default function AuthPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>パスワード</FormLabel>
                     <FormControl>
                       <Input type="password" {...field} />
                     </FormControl>
@@ -84,7 +111,7 @@ export default function AuthPage() {
                 </p>
               )}
               <Button type="submit" className="w-full">
-                Login / Register
+                ログイン / 新規登録
               </Button>
             </form>
           </Form>
