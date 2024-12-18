@@ -1,208 +1,149 @@
-import passport from "passport";
-import { IVerifyOptions, Strategy as LocalStrategy } from "passport-local";
-import { type Express } from "express";
-import session from "express-session";
-import createMemoryStore from "memorystore";
-import { scrypt, randomBytes, timingSafeEqual } from "crypto";
-import { promisify } from "util";
-import { users, insertUserSchema, type User as SelectUser } from "@db/schema";
+import { createClient } from '@supabase/supabase-js';
+import type { Express } from "express";
+import { users } from "@db/schema";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
-
-const scryptAsync = promisify(scrypt);
-const crypto = {
-  hash: async (password: string) => {
-    const salt = randomBytes(16).toString("hex");
-    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-    return `${buf.toString("hex")}.${salt}`;
-  },
-  compare: async (suppliedPassword: string, storedPassword: string) => {
-    const [hashedPassword, salt] = storedPassword.split(".");
-    const hashedPasswordBuf = Buffer.from(hashedPassword, "hex");
-    const suppliedPasswordBuf = (await scryptAsync(
-      suppliedPassword,
-      salt,
-      64
-    )) as Buffer;
-    return timingSafeEqual(hashedPasswordBuf, suppliedPasswordBuf);
-  },
-};
+import { supabase, createAdminUser } from './supabase-auth';
 
 // extend express user object with our schema
 declare global {
   namespace Express {
-    interface User extends SelectUser {}
+    interface User {
+      id: number;
+      email: string;
+      role: string;
+      isAdmin: boolean;
+    }
   }
 }
 
 export function setupAuth(app: Express) {
-  const MemoryStore = createMemoryStore(session);
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID || "flier-session-secret",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {},
-    store: new MemoryStore({
-      checkPeriod: 86400000, // prune expired entries every 24h
-    }),
-  };
+  // Initialize admin user during setup
+  createAdminUser().catch(console.error);
 
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-    sessionSettings.cookie = {
-      secure: true,
-      sameSite: "lax",
-    };
-  }
-
-  app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
-
-  passport.use(
-    new LocalStrategy(async (username, password, done) => {
-      try {
-        const [user] = await db
-          .select()
-          .from(users)
-          .where(eq(users.username, username))
-          .limit(1);
-
-        if (!user) {
-          return done(null, false, { message: "Incorrect username." });
-        }
-        const isMatch = await crypto.compare(password, user.password);
-        if (!isMatch) {
-          return done(null, false, { message: "Incorrect password." });
-        }
-        return done(null, user);
-      } catch (err) {
-        return done(err);
-      }
-    })
-  );
-
-  passport.serializeUser((user, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: number, done) => {
+  // Setup admin endpoint
+  app.post("/api/auth/setup-admin", async (req, res) => {
     try {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-      done(null, user);
-    } catch (err) {
-      done(err);
-    }
-  });
-
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      const result = insertUserSchema.safeParse(req.body);
-      if (!result.success) {
-        return res
-          .status(400)
-          .send(
-            "Invalid input: " + result.error.issues.map((i) => i.message).join(", ")
-          );
-      }
-
-      const { username, password } = result.data;
-
-      // Check if user already exists
-      const [existingUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-
-      if (existingUser) {
-        return res.status(400).send("Username already exists");
-      }
-
-      // Hash the password
-      const hashedPassword = await crypto.hash(password);
-
-      // Create the new user
-      const [newUser] = await db
-        .insert(users)
-        .values({
-          username,
-          password: hashedPassword,
-          isAdmin: false, // Default to non-admin
-        })
-        .returning();
-
-      // Log the user in after registration
-      req.login(newUser, (err) => {
-        if (err) {
-          return next(err);
-        }
-        return res.json({
-          message: "Registration successful",
-          user: { id: newUser.id, username: newUser.username, isAdmin: newUser.isAdmin },
-        });
+      const adminUser = await createAdminUser();
+      res.json({ message: "管理者アカウントを設定しました", user: adminUser });
+    } catch (error: any) {
+      console.error('Setup admin error:', error);
+      res.status(500).json({
+        message: "管理者アカウントの設定に失敗しました",
+        error: error.message
       });
-    } catch (error) {
-      next(error);
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    const result = insertUserSchema.safeParse(req.body);
-    if (!result.success) {
-      return res
-        .status(400)
-        .send(
-          "Invalid input: " + result.error.issues.map((i) => i.message).join(", ")
-        );
-    }
+  app.post("/api/register", async (req, res) => {
+    try {
+      const { email, password } = req.body;
 
-    const cb = (err: any, user: Express.User, info: IVerifyOptions) => {
-      if (err) {
-        return next(err);
+      // Don't allow registration with admin email
+      if (email === 'admin') {
+        return res.status(400).json({
+          message: '管理者アカウントは登録できません'
+        });
       }
+
+      const { data: user, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            role: 'user'
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      res.json({
+        message: "登録が完了しました",
+        user: {
+          id: user.user?.id,
+          email: user.user?.email,
+          role: 'user',
+          isAdmin: false
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        message: error.message || '登録に失敗しました'
+      });
+    }
+  });
+
+  app.post("/api/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
+        email: email === 'admin' ? 'admin@example.com' : email,
+        password
+      });
+
+      if (error) throw error;
 
       if (!user) {
-        return res.status(400).send(info.message ?? "Login failed");
+        throw new Error('ユーザー情報が見つかりません');
       }
 
-      req.logIn(user, (err) => {
-        if (err) {
-          return next(err);
+      const isAdmin = user.email === 'admin@example.com';
+
+      res.json({
+        message: "ログインに成功しました",
+        user: {
+          id: user.id,
+          email: user.email || '',
+          role: isAdmin ? 'admin' : 'user',
+          isAdmin
         }
-
-        return res.json({
-          message: "Login successful",
-          user: {
-            id: user.id,
-            username: user.username,
-            isAdmin: user.isAdmin,
-          },
-        });
       });
-    };
-    passport.authenticate("local", cb)(req, res, next);
+    } catch (error: any) {
+      res.status(401).json({
+        message: '認証に失敗しました。認証情報を確認してください。'
+      });
+    }
   });
 
-  app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).send("Logout failed");
+  app.post("/api/logout", async (req, res) => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      res.json({ message: "ログアウトしました" });
+    } catch (error: any) {
+      res.status(500).json({
+        message: error.message || 'ログアウトに失敗しました'
+      });
+    }
+  });
+
+  app.get("/api/user", async (req, res) => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error) throw error;
+
+      if (!user) {
+        return res.status(401).json({
+          message: 'ログインしていません'
+        });
       }
 
-      res.json({ message: "Logout successful" });
-    });
-  });
+      const isAdmin = user.email === 'admin@example.com';
 
-  app.get("/api/user", (req, res) => {
-    if (req.isAuthenticated()) {
-      return res.json(req.user);
+      res.json({
+        id: user.id,
+        email: user.email,
+        role: isAdmin ? 'admin' : 'user',
+        isAdmin
+      });
+    } catch (error: any) {
+      res.status(401).json({
+        message: error.message || 'ユーザー情報の取得に失敗しました'
+      });
     }
-
-    res.status(401).send("Not logged in");
   });
 }
